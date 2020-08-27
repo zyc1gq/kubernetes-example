@@ -1,0 +1,9 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: zyczs
+  namespace: kube-system
+rules:
+- apiGroups: ["","apps","extensions"] #下面资源对象对应的group,写core竟然不对，要写""
+  resources: ["pods","deployments","replicasets"] #可以操作的资源对象
+  verbs: ["get","list","watch","create","update","patch","delete"]  #给role的权限 全给：["*"]

@@ -1,0 +1,21 @@
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: rc-demo
+  labels:
+    apps: rc
+spec:
+  replicas: 3
+  selector: #选择具有相同label的pod,一般情况下可以不写，就会默认以template下的为标准
+    app: rc
+  template: #pod模板
+    metadata: #这里不能写name，否则三个pod有相同的name,起冲突
+      labels:
+        app: rc
+    spec:
+      containers:
+      - name: nginx-demo
+        image: nginx
+        ports:
+        - containerPort: 80

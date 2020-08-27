@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: zyczs-rolebinding
+  namespace: kube-system
+subjects:
+- kind: User #User Account
+  name: zyczs
+  apiGroup: ""
+roleRef: #绑定role
+  kind: Role
+  name: zyczs
+  apiGroup: ""

@@ -1,0 +1,19 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deploy
+  labels:
+    apps: nginx
+spec:
+  replicas: 3
+  template: #pod模板
+    metadata: #这里不能写name，否则三个pod有相同的name,起冲突
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx-demo
+        image: nginx
+        ports:
+        - containerPort: 80

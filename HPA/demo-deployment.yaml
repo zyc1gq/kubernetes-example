@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-deployment
+  labels:
+    app: ecs-demo
+spec:
+  replicas: 1
+  selector: # .spec.selector 必须匹配 .spec.template.metadata.labels，否则它将被API拒绝。如果 .spec.selector 没有被指定， .spec.selector.matchLabels 默认是 .spec.template.metadata.labels
+    #选择label：app=ecs-demo的pod来创建实例
+    matchLabels:   #metadata定义Pod的元数据，至少要顶一个label，label的key和value可以任意指定
+      app: ecs-demo
+  template:
+    metadata:
+      labels:
+        app: ecs-demo
+    spec:
+      containers:
+      - name: ecs-demo
+        image: nginx
+        ports:
+        - containerPort: 80 #暴露给service的端口
+        resources:
+          requests:
+            cpu: 500m #最小资源
+            memory: 512Mi #最小内存
+          limits:
+            cpu: 1000m #最大
+            memory: 1024Mi
+        readinessProbe:
+          httpGet:
+            port: 80
+            path: /
+          initialDelaySeconds: 50
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            port: 80
+            path: /
+          initialDelaySeconds: 50
+          periodSeconds: 10
+
+

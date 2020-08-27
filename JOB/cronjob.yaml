@@ -1,0 +1,23 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: cronjob-demo
+spec:
+  successfulJobHistoryLimit: 3 #最多保存多少个历史记录
+  failedJobHistoryLimit: 10 #可以用来排查错误
+  schedule: "*/1 * * * *" #只需要指定时间，不需要命令；这里是每一分钟创建一次，每次都会有不同的pod和job
+  jobTemplate: #下面是一个JOB
+    spec:
+      template:
+        metadata:
+          name: cronjob-demo
+        spec:
+          restartPolicy: OnFailure #失败之后重启
+          containers:
+          - name: counter
+            image: busybox
+            command:
+            - "/bin/bash"
+            - "-c"
+            - "for i in 9 8 7 6 5 4 3 2 1; do echo $i; done; "

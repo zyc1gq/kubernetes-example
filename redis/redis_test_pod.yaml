@@ -1,0 +1,45 @@
+#一个deployment-redis,使用service将其暴露
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-test-deployment
+  labels:
+    app: redis-test
+spec:
+  replicas: 1
+  selector: # .spec.selector 必须匹配 .spec.template.metadata.labels，否则它将被API拒绝。如果 .spec.selector 没有被指定， .spec.selector.matchLabels 默认是 .spec.template.metadata.labels
+    #选择label：app=ecs-demo的pod来创建实例
+    matchLabels:   #metadata定义Pod的元数据，至少要顶一个label，label的key和value可以任意指定
+      app: redis-test
+  template:
+    metadata:
+      labels:
+        app: redis-test
+    spec:
+      containers:
+      - name: redis-test
+        image: redis
+        command:
+          - "redis-server"
+        ports:
+        - containerPort: 6379 #暴露给service的端口
+        resources:
+          requests:
+            cpu: 500m #最小资源
+            memory: 512Mi #最小内存
+          limits:
+            cpu: 1000m #最大
+            memory: 1024Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-test-service
+spec:
+  selector: # selector 指明挑选那些 label 为 run: xx 的 Pod 作为 Service 的后端。
+    app: redis-test
+  ports:  #将Service 的 8080 端口映射到 Pod 的 8080 端口，使用 TCP 协议
+  - protocol: TCP
+    port: 6379 #service的端口
+    targetPort: 6379 #容器暴露给service的端口
+  type: NodePort # 暴露service的三种方式 NodePort，LoadBalancer 和 Ingress 

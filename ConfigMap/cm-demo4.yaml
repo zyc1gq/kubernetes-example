@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cm-demo2
+spec:
+  containers:
+  - name: cm-demo2
+    image: busybox
+    command:
+    - "/bin/bash"
+    - "-c"
+    - "cat /etc/config/redis.conf"
+    volumeMounts:
+    - name: config-volume
+      mountPath: /etc/config
+  volumes:
+  - name: config-volume
+    configMap:
+      name: cm-demo3 #cm-demo3这个configMap中的文件回被挂载到容器中，

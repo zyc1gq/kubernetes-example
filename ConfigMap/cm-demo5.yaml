@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cm-demo2
+spec:
+  containers:
+  - name: cm-demo2
+    image: busybox
+    command:
+    - "/bin/bash"
+    - "-c"
+    - "cat /etc/config/path/to/redis.conf"
+    volumeMounts:
+    - name: config-volume
+      mountPath: /etc/config
+  volumes:
+  - name: config-volume
+    configMap:
+      name: cm-demo3 #cm-demo3这个configMap中的文件回被挂载到容器中，
+      items: #如果没有items应该就是所有的都拷贝过去了
+      - key: mysql.conf #指定要保存的文件
+        path: path/to/mysql.conf #指定保存位置(需要加上前缀)

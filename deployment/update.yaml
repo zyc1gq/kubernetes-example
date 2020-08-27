@@ -1,0 +1,26 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-deploy
+  labels:
+    apps: nginx
+spec:
+  replicas: 3
+  revisionHistoryLimit: 15 #只保留最近的15个rs版本，每次升级都会保留RS，代价高，因此需要指定最多数量
+  minReadySeconds: 5
+  strategy: #升级策略
+    type: RollingUpdate #升级类型
+    rollingUpdate:
+      maxSurge: 1 #升级过程中最多比原本多几个POD
+      maxUnavailable: 1 #过程中最多有几个不可用POD
+  template: #pod模板
+    metadata: #这里不能写name，否则三个pod有相同的name,起冲突
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx-demo
+        image: nginx
+        ports:
+        - containerPort: 80

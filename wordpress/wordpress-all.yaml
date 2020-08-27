@@ -1,0 +1,132 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: blog
+  labels:
+    app: mysql
+spec:
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:5.7
+        imagePullPolicy: IfNotPresent
+        args:
+        - --default_authentication_plugin=mysql_native_password
+        - --character-set-server=utf8mb4
+        - --collation-server=utf8mb4_unicode_ci
+        ports:
+        - name: mysqlport
+          containerPort: 3306
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: rootPassW0rd
+        - name: MYSQL_DATABASE
+          value: wordpress
+        - name: MYSQL_USER
+          value: wordpress
+        - name: MYSQL_PASSWORD
+          value: wordpress
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: blog
+spec:
+  selector:
+    app: mysql
+  type: NodePort
+  ports:
+  - protocol: TCP
+    port: 3306
+    targetPort: mysqlport
+    nodePort: 32766
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress
+  namespace: blog
+  labels:
+    app: wordpress
+spec:
+  # replicas: 1
+  selector:
+    matchLabels:
+      app: wordpress
+  # revisionHistoryLimit: 15 #只保留最近的15个rs版本，每次升级都会保留RS，代价高，因此需要指定最多数量
+  minReadySeconds: 5
+  strategy: #升级策略
+    type: RollingUpdate #升级类型
+    rollingUpdate:
+      maxSurge: 1 #升级过程中最多比原本多几个POD
+      maxUnavailable: 1 #过程中最多有几个不可用POD
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      initContainers: #如果K8S的DNS之类有问题，可能就无法探测到mysql
+      - name: init-mydb
+        image: busybox
+        command: ["sh","-c","until nslookup mysql; do echo waiting for mydb; sleep 2; done;"]
+      containers:
+      - name: wordpress
+        image: wordpress
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: wordpress-port
+          containerPort: 80
+        env:
+        - name: WORDPRESS_DB_HOST
+          value: mysql:3306
+        - name: WORDPRESS_DB_USER
+          value: wordpress
+        - name: WORDPRESS_DB_PASSWORD
+          value: wordpress
+        resources:
+          requests:
+            cpu: 500m #最小资源
+            memory: 512Mi #最小内存
+          limits:
+            cpu: 1000m #最大
+            memory: 1024Mi
+        readinessProbe:
+          tcpSocket: #这里使用httpGet失败了？？？？难道对httpget还有要求？
+            port: 80
+          initialDelaySeconds: 50
+          periodSeconds: 10
+        # livenessProbe:
+        #   httpGet:
+        #     port: 80
+        #     path: /
+        #   initialDelaySeconds: 50
+        #   periodSeconds: 10
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress
+  namespace: blog
+spec:
+  selector:
+    app: wordpress
+  type: NodePort
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: wordpress-port
+    nodePort: 32254
+

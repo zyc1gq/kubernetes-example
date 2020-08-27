@@ -1,0 +1,23 @@
+#kubectl autoscale deployment xxxx --cpu-percent=50 --min=1 --max=10
+#上面这个可以一键实现，但是不推荐
+apiVersion: autoscaling/v2beta1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: demo-hpa-beta1
+  namespace: default
+spec:
+  minReplicas: 1 #最少几个副本
+  maxReplicas: 5 #最多几个副本
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo-deployment
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 50  ##注意此时是根据使用率，也可以根据使用量：targetAverageValue
+  - type: Resource
+    resource:
+      name: memory
+      targetAverageUtilization: 50  ##注意此时是根据使用率，也可以根据使用量：targetAverageValue

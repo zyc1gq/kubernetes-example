@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-service
+spec:
+  selector: # selector 指明挑选那些 label 为 run: xx 的 Pod 作为 Service 的后端。
+    app: ecs-demo
+  ports:  #将Service 的 8080 端口映射到 Pod 的 8080 端口，使用 TCP 协议
+  - protocol: TCP
+    port: 80 #service的端口
+    targetPort: 80 #容器暴露给service的端口
+    nodePort: 30036  # nodePort，它指定节点上开放的端口值 端口范围只能是 30000-32767，如果不指定这个端口，系统将选择一个随机端口
+  sessionAffinity: ClientIP # service内部实现session保持
+  sessionAffinityConfig:
+    clientIP:
+        timeoutSeconds: 10800 # timeoutSeconds指的是session保持的时间，这个时间默认是10800秒，也就是三个小时
+  type: NodePort # 暴露service的三种方式 NodePort，LoadBalancer 和 Ingress 
