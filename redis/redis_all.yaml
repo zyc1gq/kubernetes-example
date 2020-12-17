@@ -182,3 +182,4 @@ spec:
     app: redis
     appCluster: redis-cluster
 ---
+# 还需要一个ubuntu来配置集群主从节点：https://blog.csdn.net/zhutongcloud/article/details/90768390

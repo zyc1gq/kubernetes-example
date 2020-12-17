@@ -1,0 +1,10 @@
+<replicatedLevelDB\ directory=\"\${activemq.data}\/leveldb\"\ replicas=\"3\"\ bind=\"tcp:\/\/0.0.0.0:0\"\ zkAddress=\"zk-0.zk-hs.default.svc.cluster.local:2181,zk-1.zk-hs.default.svc.cluster.local:2181,zk-2.zk-hs.default.svc.cluster.local:2181\"\ sync=\"local_disk\"\ hostname=\"$(hostname)\"\ zkPath=\"\/activemq\/leveldb-stores\"\/>
+
+sed "s/<kahaDB\ directory=\"\${activemq.data}\/kahadb\"\/>/<replicatedLevelDB\ directory=\"\${activemq.data}\/leveldb\"\ replic0.0:0\"\ zkAddress=\"zk-0.zk-hs.default.svc.cluster.local:2181,zk-1.zk-hs.default.svc.cluster.local:2181,zk-2.zk-hs.default.svc.cluster.local:2181\"\ sync=\"local_disk\"\ hostname=\"\"\ zkPath=\"\/activemq\/leveldb-stores\"\/>/g" activemq.xml
+
+sed -i "s/<kahaDB\ directory=\"\${activemq.data}\/kahadb\"\/>/<replicatedLevelDB\ directory=\"\${activemq.data}\/leveldb\"\ replicas=\"3\"\ bind=\"tcp:\/\/0.0.0.0:0\"\ zkAddress=\"zk-0.zk-hs.default.svc.cluster.local:2181,zk-1.zk-hs.default.svc.cluster.local:2181,zk-2.zk-hs.default.svc.cluster.local:2181\"\ sync=\"local_disk\"\ hostname=\"$(hostname -f)\"\ zkPath=\"\/activemq\/leveldb-stores\"\/>/g" activemq.xml
+
+sed -i "s/brokerName=\"localhost\"/brokerName=\"cluster\"/g" activemq.xml
+
+//自动修改activemq.xml的配置文件，两部分；
+//然后自动执行，命令为：

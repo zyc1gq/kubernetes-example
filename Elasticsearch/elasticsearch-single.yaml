@@ -1,3 +1,4 @@
+#sysctl -w vm.max_map_count=262144
 ---
 apiVersion: apps/v1
 kind: Deployment

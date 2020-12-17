@@ -1,0 +1,119 @@
+#部署activemq，并结合zookeeper：3+3
+#需要修改原本的
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: activemq-hs
+  labels:
+    app: activemq
+spec:
+  # ports:
+  # - port: 2888
+  #   name: server
+  # - port: 3888
+  #   name: leader-election
+  clusterIP: None #headless service
+  selector:
+    app: activemq
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: activemq-cs
+  labels:
+    app: activemq
+spec:
+  ports:
+  - port: 8161
+    name: command
+  - port: 61616
+    name: server
+  selector:
+    app: activemq
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: activemq-pdb
+spec:
+  selector:
+    matchLabels:
+      app: activemq
+  maxUnavailable: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: activemq
+spec:
+  selector:
+    matchLabels:
+      app: activemq
+  serviceName: activemq-hs
+  replicas: 3
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        app: activemq
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "app"
+                    operator: In
+                    values:
+                    - activemq
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: kubernetes-activemq
+        imagePullPolicy: Always
+        image: "docker.io/rmohr/activemq:5.13.4"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "0.5"
+        ports:
+        - containerPort: 8161
+          name: command
+        - containerPort: 61616
+          name: server
+        command:
+        - /bin/sh
+        - -c
+        - sed -i "s/brokerName=\"localhost\"/brokerName=\"1117-activemq-cluster\"/g" conf/activemq.xml; sed -i "s/<kahaDB\ directory=\"\${activemq.data}\/kahadb\"\/>/<replicatedLevelDB\ directory=\"\${activemq.data}\/leveldb\"\ replicas=\"3\"\ bind=\"tcp:\/\/0.0.0.0:0\"\ zkAddress=\"zk-0.zk-hs.default.svc.cluster.local:2181,zk-1.zk-hs.default.svc.cluster.local:2181,zk-2.zk-hs.default.svc.cluster.local:2181\"\ sync=\"local_disk\"\ hostname=\"$(hostname -f)\"\ zkPath=\"\/opt\/activemq\/leveldb-stores\"\/>/g" conf/activemq.xml; bin/activemq console;
+        # readinessProbe:
+        #   exec:
+        #     command:
+        #     - sh
+        #     - -c
+        #     - "zookeeper-ready 2181"
+        #   initialDelaySeconds: 10
+        #   timeoutSeconds: 5
+        # livenessProbe:
+        #   exec:
+        #     command:
+        #     - sh
+        #     - -c
+        #     - "zookeeper-ready 2181"
+          # initialDelaySeconds: 10
+          # timeoutSeconds: 5
+        # volumeMounts:
+        # - name: datadir
+        #   mountPath: /var/lib/zookeeper
+      securityContext: #这个权限很重要，zookeeper需要以root运行
+        runAsUser: 0
+        fsGroup: 0
+  # volumeClaimTemplates:
+  # - metadata:
+  #     name: datadir
+  #   spec:
+  #     accessModes: [ "ReadWriteOnce" ]
+  #     resources:
+  #       requests:
+  #         storage: 10Gi

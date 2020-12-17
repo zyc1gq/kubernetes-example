@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: activemq-deploy
+  labels:
+    app: activemq-single
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: activemq-single
+  template:
+    metadata:
+      name: activemq-single-pod
+      labels:
+        app: activemq-single
+    spec:
+      containers:
+      - image: docker.io/webcenter/activemq
+        imagePullPolicy: IfNotPresent
+        name: activemq-single
+        ports:
+        - name: active-port
+          containerPort: 61616
+        - name: port-control
+          containerPort: 8161
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: activemq-service
+  labels:
+    app: activemq-service
+spec:
+  type: NodePort
+  ports:
+  - port: 61616
+    targetPort: 61616
+    name: active-port
+  - port: 8161
+    targetPort: 8161
+    name: port-control
+  selector:
+    app: activemq-single
+

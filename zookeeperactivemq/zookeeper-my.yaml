@@ -1,0 +1,108 @@
+#之前的zookeeper总是会有一些问题，这里简单的尝试一下部署
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zk-hs
+  labels:
+    app: zk
+spec:
+  ports:
+  - port: 2888
+    name: server
+  - port: 3888
+    name: leader-election
+  clusterIP: None #headless service
+  selector:
+    app: zk
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: zk-cs
+  labels:
+    app: zk
+spec:
+  ports:
+  - port: 2181
+    name: client
+  selector:
+    app: zk
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: zk-pdb
+spec:
+  selector:
+    matchLabels:
+      app: zk
+  maxUnavailable: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: zk
+spec:
+  selector:
+    matchLabels:
+      app: zk
+  serviceName: zk-hs
+  replicas: 3
+  updateStrategy:
+    type: RollingUpdate
+  podManagementPolicy: OrderedReady
+  template:
+    metadata:
+      labels:
+        app: zk
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "app"
+                    operator: In
+                    values:
+                    - zk
+              topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: kubernetes-zookeeper
+        imagePullPolicy: Always
+        image: "zookeeper:3.4.13"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "0.5"
+        ports:
+        - containerPort: 2181
+          name: client
+        - containerPort: 2888
+          name: server
+        - containerPort: 3888
+          name: leader-election
+        command:
+        - /bin/bash
+        - -c
+        - mkdir /tmp/zookeeper; temp=`echo $(hostname) | tr -cd "[0-9]" `; ((i=$temp + 1 )); echo $i; echo $i > /tmp/zookeeper/myid; bin/zkServer.sh start-foreground;
+        volumeMounts:
+        - name: datadir
+          mountPath: /var/lib/zookeeper
+        - name: config-volume
+          mountPath: /conf
+      securityContext: #这个权限很重要，zookeeper需要以root运行
+        runAsUser: 0
+        fsGroup: 0
+      volumes:
+      - name: config-volume
+        configMap:
+          name: zk-cm2 #configMap中的文件回被挂载到容器中，
+  volumeClaimTemplates:
+  - metadata:
+      name: datadir
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi

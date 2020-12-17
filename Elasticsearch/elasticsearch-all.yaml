@@ -1,4 +1,5 @@
 # 比较简单，没有集群，一个deployment一个svc
+#sysctl -w vm.max_map_count=262144
 kind: List
 apiVersion: v1
 items:

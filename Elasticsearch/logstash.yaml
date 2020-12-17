@@ -1,4 +1,6 @@
-# 待修改
+# 待修改，这一版本kubectl exec -it xxx /bin/bash进入容器之后 执行bin/logstash -f configabc/logstash_mysql.conf
+# 问题：pvc覆盖(建立新的目录configabc将jar和config挂载上去)，有些.lock文件需要删除
+# 可以更自动化一点
 ---
 apiVersion: v1
 kind: PersistentVolume
@@ -13,7 +15,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Recycle
   nfs:
-    path: "/data/k8s/logstash/pv1"
+    path: /data/k8s/logstash/pv1
     server: 192.168.227.130
 
 ---
@@ -52,8 +54,12 @@ spec:
       containers:
         - name: logstash
           image: logstash:6.4.0
+          # volumeMounts:
+          #   - mountPath: /usr/share/logstash/pipeline
+          #     name: logstash-conf-volume
           volumeMounts:
-            - mountPath: /usr/share/logstash/pipeline
+            - mountPath: /usr/share/logstash/configabc/
+              # subPath: pv-test
               name: logstash-conf-volume
           ports:
             - containerPort: 8080
@@ -61,9 +67,13 @@ spec:
           env:
             - name: "XPACK_MONITORING_ELASTICSEARCH_URL"
               value: "http://10.1.209.48:9200"
+          # args: #安装jdbc的相关依赖，能够直接运行
+          #   - /bin/bash
+          #   - -c
+          #   - logstash-plugin install logstash-input-jdbc; logstash-plugin install logstash-output-elasticsearch; mkdir configabc; bin/logstash -f configabc/logstash_mysql.conf 
           securityContext:
             privileged: true
-      volumes:
+      volumes: #将配置文件数据挂载到这儿
         - name: logstash-conf-volume
           persistentVolumeClaim:
             claimName: logstash-conf-pvc
@@ -85,3 +95,21 @@ spec:
   selector:
     elastic-app: logstash
   type: NodePort
+
+
+  # 个人理解logstash的主要工作就是一个pipline，将两个工具之间的信息对接起来；主要是配置文件；
+  # 命令和参数说明：
+# command、args两项实现覆盖Dockerfile中ENTRYPOINT的功能，具体的command命令代替ENTRYPOINT的命令行，args代表集体的参数。
+ 
+# 如果command和args均没有写，那么用Dockerfile的配置。
+# 如果command写了，但args没有写，那么Dockerfile默认的配置会被忽略，执行输入的command（不带任何参数，当然command中可自带参数）。
+# 如果command没写，但args写了，那么Dockerfile中配置的ENTRYPOINT的命令行会被执行，并且将args中填写的参数追加到ENTRYPOINT中。
+# 如果command和args都写了，那么Dockerfile的配置被忽略，执行command并追加上args参数。比如：
+# command：/test.sh,p1,p2
+# args: p3,p4
+ 
+# 另：多命令执行使用sh,-c,[command;command,...]的形式，单条命令的参数填写在具体的command里面，例如：
+# command：sh,-c,echo '123';/test.sh,p1,p2,p3,p4
+# args: 不填
+
+# pv如何设置不覆盖原本的数据：设置subpath+configmap《配置文件位置不可改变》或者使用新的文件夹《配置文件位置可以指定》；
